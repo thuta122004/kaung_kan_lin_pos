@@ -77,3 +77,8 @@ INSERT IGNORE INTO products
 ('candle-11', 'ဖယောင်းတိုင် အစိမ်း', 'Green candle', 'Normal', 2280, 2730, 1.08, 1.29, '၁ နာရီ', '1 Hour', '၁၆ တိုင်ပါ ပုံမှန်ထုပ်', '16-piece Normal set', 'images/16candlespack2280greennormal.jpg', 0),
 ('candle-12', 'ဖယောင်းတိုင် အစိမ်း', 'Green candle', 'Normal', 2280, 2730, 1.08, 1.29, '၃၀ မိနစ်', '30 Mins', '၃၂ တိုင်ပါ ပုံမှန်ထုပ်', '32-piece Normal set', 'images/32candlespack2280greennormal.jpg', 0),
 ('candle-13', 'ဖယောင်းတိုင် အစိမ်း', 'Green candle', 'Small', 1800, 2300, 0.85, 1.08, '၂၀ မိနစ်', '20 Mins', '၃၂ တိုင်ပါ အသေးထုပ်', '32-piece small set', 'images/32candlespack1800greensmall.jpg', 0);
+
+INSERT IGNORE INTO products
+(id, name_mm, name_en, category, original_price_mmk, selling_price_mmk, original_price_usd, selling_price_usd, burn_time_mm, burn_time_en, description_mm, description_en, image_path, is_bestseller) VALUES
+('candle-14', 'ဖယောင်းတိုင် အစိမ်း', 'Green candle', 'Small', 1130, 1600, 0.52, 0.74, '၂၀ မိနစ်', '20 Mins', '၂၀ တိုင်ပါ အသေးထုပ်', '20-piece small set', 'images/20candlespack1130greensmall.jpg', 0),
+('candle-15', 'ဖယောင်းတိုင် အနီ', 'Red candle', 'Small', 1060, 1530, 0.50, 0.72, '၂၀ မိနစ်', '20 Mins', '၂၀ တိုင်ပါ အသေးထုပ်', '20-piece small set', 'images/20candlespack1060redsmall.jpg', 0);
