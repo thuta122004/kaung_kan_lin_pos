@@ -169,7 +169,7 @@ $sum = $pdo->query("SELECT
     FROM orders")->fetch();
 $orders = $pdo->query('SELECT * FROM orders ORDER BY order_date DESC, id DESC')->fetchAll();
 $customers = $pdo->query('SELECT id, name, phone FROM customers ORDER BY name')->fetchAll();
-$products = $pdo->query('SELECT id, name_en, description_en, original_price_mmk, selling_price_mmk, is_available FROM products ORDER BY id')->fetchAll();
+$products = $pdo->query('SELECT id, name_en, name_mm, description_en, original_price_mmk, selling_price_mmk, is_available FROM products ORDER BY id')->fetchAll();
 
 $pageTitle = 'Orders';
 include __DIR__ . '/nav.php';
@@ -295,10 +295,18 @@ include __DIR__ . '/nav.php';
     </div>
 
     <div>
-      <div class="flex items-center justify-between mb-2">
-        <label class="label !mb-0">Items</label>
-        <button type="button" class="btn btn-ghost !py-1" onclick="addRow()"><i class="fa-solid fa-plus"></i> Add item</button>
+      <div class="mb-2">
+        <label class="label !mb-0">Add Items</label>
       </div>
+
+      <div class="relative mb-3">
+        <div class="relative">
+          <input type="text" id="itemSearch" class="input pl-9" placeholder="Search product by name, ID, or description..." oninput="filterSearchProducts()" onfocus="filterSearchProducts()" autocomplete="off">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-sand text-sm"></i>
+        </div>
+        <div id="searchResults" class="hidden absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-rose-soft rounded-xl shadow-lg max-h-60 overflow-y-auto divide-y divide-rose-soft"></div>
+      </div>
+
       <div id="rows" class="space-y-2"></div>
     </div>
 
@@ -330,33 +338,100 @@ include __DIR__ . '/nav.php';
 <script>
   const PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
   let snap = {};
-  const optHtml = sel => PRODUCTS.filter(p => p.is_available == 1 || p.id === sel).map(p =>
-    `<option value="${esc(p.id)}" data-cost="${p.original_price_mmk}" data-price="${p.selling_price_mmk}" ${p.id === sel ? 'selected' : ''}>${esc(p.id)} — ${esc(p.name_en)} (${esc(p.description_en)}) · ${Math.round(p.selling_price_mmk).toLocaleString()}</option>`).join('');
 
   function toggleNewCust() {
     document.getElementById('newCust').style.display = document.getElementById('custSel').value === '0' ? 'grid' : 'none';
   }
 
-  function addRow(pid = '', qty = 1) {
+  function filterSearchProducts() {
+    const q = document.getElementById('itemSearch').value.toLowerCase().trim();
+    const box = document.getElementById('searchResults');
+
+    const matches = PRODUCTS.filter(p =>
+      (p.is_available == 1 || snap[p.id]) && (
+        p.id.toLowerCase().includes(q) ||
+        p.name_en.toLowerCase().includes(q) ||
+        (p.name_mm && p.name_mm.toLowerCase().includes(q)) ||
+        (p.description_en && p.description_en.toLowerCase().includes(q))
+      )
+    );
+
+    if (!matches.length) {
+      box.innerHTML = '<div class="p-3 text-sm text-sand text-center">No matching products found</div>';
+    } else {
+      box.innerHTML = matches.map(p => {
+        const price = snap[p.id] ? snap[p.id].price : p.selling_price_mmk;
+        return `
+          <div class="p-2.5 hover:bg-rose-soft/60 cursor-pointer flex items-center justify-between transition" onclick="selectSearchProduct('${esc(p.id)}')">
+            <div>
+              <p class="font-semibold text-sm">${esc(p.name_en)} <span class="text-xs text-sand font-normal">(${esc(p.id)})</span></p>
+              <p class="text-xs text-sand">${esc(p.description_en || p.name_mm || '')}</p>
+            </div>
+            <span class="font-bold text-sm text-copper whitespace-nowrap ml-2">${fmt(price)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+    box.classList.remove('hidden');
+  }
+
+  function selectSearchProduct(pid) {
+    let found = false;
+    document.querySelectorAll('#rows .row').forEach(row => {
+      const hiddenPid = row.querySelector('input[name="product_id[]"]')?.value;
+      if (hiddenPid === pid) {
+        const qtyInput = row.querySelector('input[name="qty[]"]');
+        qtyInput.value = (parseInt(qtyInput.value) || 0) + 1;
+        found = true;
+      }
+    });
+
+    if (!found) {
+      addRow(pid, 1);
+    }
+
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('searchResults').classList.add('hidden');
+    recalc();
+  }
+
+  function addRow(pid, qty = 1) {
+    if (!pid) return;
+    const p = PRODUCTS.find(x => x.id === pid) || {};
+    const s = snap[pid];
+    const price = s ? s.price : (p.selling_price_mmk || 0);
+
     const d = document.createElement('div');
-    d.className = 'row grid grid-cols-[1fr_5rem_auto] gap-2 items-center';
-    d.innerHTML = `<select name="product_id[]" class="input" onchange="recalc()"><option value="">Select product…</option>${optHtml(pid)}</select>
-    <input type="number" name="qty[]" min="1" value="${qty}" class="input" oninput="recalc()">
-    <button type="button" class="text-sand hover:text-rose-700 px-2" onclick="this.parentNode.remove();recalc()"><i class="fa-solid fa-trash"></i></button>`;
+    d.className = 'row grid grid-cols-[1fr_5rem_auto] gap-2 items-center p-2.5 rounded-xl bg-rose-soft/30 border border-rose-soft/60';
+    d.innerHTML = `
+      <div>
+        <p class="font-semibold text-sm">${esc(p.name_en || pid)} <span class="text-xs text-sand font-normal">(${esc(pid)})</span></p>
+        <p class="text-xs text-sand">${fmt(price)}</p>
+        <input type="hidden" name="product_id[]" value="${esc(pid)}">
+      </div>
+      <input type="number" name="qty[]" min="1" value="${qty}" class="input" oninput="recalc()">
+      <button type="button" class="text-sand hover:text-rose-700 px-2" onclick="this.closest('.row').remove();recalc()"><i class="fa-solid fa-trash"></i></button>
+    `;
     document.getElementById('rows').appendChild(d);
+    recalc();
   }
 
   function recalc() {
     let r = 0,
       c = 0;
     document.querySelectorAll('#rows .row').forEach(row => {
-      const sel = row.querySelector('select');
-      const o = sel.selectedOptions[0];
-      const q = parseInt(row.querySelector('input').value) || 0;
-      if (!o || !sel.value) return;
-      const s = snap[sel.value];
-      r += (s ? s.price : o.dataset.price) * q;
-      c += (s ? s.cost : o.dataset.cost) * q;
+      const pidInput = row.querySelector('input[name="product_id[]"]');
+      if (!pidInput) return;
+      const pid = pidInput.value;
+      const q = parseInt(row.querySelector('input[name="qty[]"]').value) || 0;
+      const p = PRODUCTS.find(x => x.id === pid) || {};
+      const s = snap[pid];
+
+      const price = s ? s.price : (+p.selling_price_mmk || 0);
+      const cost = s ? s.cost : (+p.original_price_mmk || 0);
+
+      r += price * q;
+      c += cost * q;
     });
     tRev.textContent = fmt(r);
     tCost.textContent = fmt(c);
@@ -364,9 +439,13 @@ include __DIR__ . '/nav.php';
   }
 
   function validateOrder() {
-    const ok = [...document.querySelectorAll('#rows .row')].some(r => r.querySelector('select').value && parseInt(r.querySelector('input').value) > 0);
+    const ok = [...document.querySelectorAll('#rows .row')].some(r => {
+      const pid = r.querySelector('input[name="product_id[]"]')?.value;
+      const qty = parseInt(r.querySelector('input[name="qty[]"]')?.value) || 0;
+      return pid && qty > 0;
+    });
     if (!ok) {
-      alert('Please add at least one item.');
+      alert('Please search and add at least one item.');
       return false;
     }
     return true;
@@ -384,12 +463,14 @@ include __DIR__ . '/nav.php';
     snap = {};
     fOrderId.value = '';
     document.getElementById('rows').innerHTML = '';
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('searchResults').classList.add('hidden');
     setMode(false);
     toggleNewCust();
-    addRow();
     recalc();
     openModal('createModal');
   }
+
   async function editOrder(id) {
     try {
       const o = await (await fetch('orders.php?detail=' + id)).json();
@@ -412,6 +493,8 @@ include __DIR__ . '/nav.php';
       fStatus.value = o.status;
       fDate.value = o.order_date.replace(' ', 'T').slice(0, 16);
       document.getElementById('rows').innerHTML = '';
+      document.getElementById('itemSearch').value = '';
+      document.getElementById('searchResults').classList.add('hidden');
       o.items.forEach(i => addRow(i.product_id, i.quantity));
       toggleNewCust();
       recalc();
@@ -420,6 +503,7 @@ include __DIR__ . '/nav.php';
       alert('Could not load the order for editing.');
     }
   }
+
   async function showOrder(id) {
     const box = document.getElementById('detailBody');
     box.innerHTML = '<p class="text-sand text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</p>';
@@ -442,7 +526,7 @@ include __DIR__ . '/nav.php';
       <div class="overflow-x-auto rounded-xl border border-rose-soft"><table class="w-full">
         <thead><tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Unit Price</th><th>Subtotal</th><th>Profit</th></tr></thead>
         <tbody>${o.items.map(i => `<tr>
-          <td><p class="font-semibold">${esc(i.name_en)}</p><p class="text-xs text-sand">${esc(i.description_en)} · ${esc(i.product_id)}</p></td>
+          <td><p class="font-semibold">${esc(i.name_en)}</p><p class="text-xs text-sand">${esc(i.description_en)} ·${esc(i.product_id)}</p></td>
           <td>${i.quantity}</td><td>${fmt(i.original_price_mmk)}</td><td>${fmt(i.unit_price_mmk)}</td>
           <td>${fmt(i.subtotal_revenue_mmk)}</td><td class="font-semibold text-emerald-700">${fmt(i.subtotal_profit_mmk)}</td></tr>`).join('')}</tbody></table></div>
       <div class="mt-4 grid grid-cols-3 gap-2 text-center rounded-xl bg-rose-soft/60 border border-rose-soft p-3">
@@ -454,8 +538,16 @@ include __DIR__ . '/nav.php';
       box.innerHTML = '<p class="text-rose-700 text-center py-8">Could not load order details.</p>';
     }
   }
+
+  document.addEventListener('click', e => {
+    const input = document.getElementById('itemSearch');
+    const box = document.getElementById('searchResults');
+    if (input && box && !input.contains(e.target) && !box.contains(e.target)) {
+      box.classList.add('hidden');
+    }
+  });
+
   toggleNewCust();
-  addRow();
 </script>
 </body>
 
