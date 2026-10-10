@@ -215,7 +215,7 @@ include __DIR__ . '/nav.php';
     <?php foreach (
       [
         ['Other Incomes', mmk($otherIncome), 'fa-hand-holding-dollar', 'text-copper', 'Investments, capital, grants'],
-        ['Total Income', mmk($totalIncome), 'fa-arrow-down-to-line', 'text-emerald-700', 'Order profit + other incomes'],
+        ['Total Income', mmk($totalIncome), 'fa-arrow-trend-up', 'text-emerald-700', 'Order profit + other incomes'],
         ['Total Expenses', mmk($totalExpenses), 'fa-wallet', 'text-rose-700', 'Raw materials, packaging, operational costs'],
         ['Net Result', mmk($netResult), 'fa-scale-balanced', $tone($netResult), 'Total income - total expenses'],
       ] as [$t, $v, $ic, $cl, $sub]
