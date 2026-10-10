@@ -5,6 +5,7 @@ $links = [
   'orders.php'    => ['Orders', 'fa-receipt'],
   'customers.php' => ['Customers', 'fa-users'],
   'products.php'  => ['Products', 'fa-fire-flame-simple'],
+  'expenses.php'  => ['Expenses', 'fa-wallet'],
   'report.php'    => ['Reports & Analytics', 'fa-chart-line'],
 ];
 $flash = $_SESSION['flash'] ?? null;
